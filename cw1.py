@@ -37,11 +37,21 @@ def MyRK3_step(f,t,qn,dt,options):
 def MyGRRK3_step(f, t, qn, dt, options):
     i=0
     def F(K):
-        result = K-np.squeeze(np.transpose(f(t+dt/3,qn+dt/12*(5*K),options)))
+        """
+        :param K: the vector K in (6) where K=(k1[0],k1[1],k1[0],k1[1])
+        :return:
+        """
+        k1=np.array([[K[0]],[K[1]]])
+        k2 = np.array([[K[2]], [K[3]]])
+        result = np.array([[k1],[k2]])-np.array([[f(t+dt/3,qn+dt/12*(5*k1-k2),options)],[f(t+dt,qn+dt/4*(3*k1+k2),options)]])
+        result = np.reshape(result,(4,))
         return result
-    k_intial_guess = f(t+dt/3,qn,options)
-    result = scipy.optimize.fsolve(F,k_intial_guess)
-    print(result)
+    k_intial_guess = np.array([f(t+dt/3,qn,options),f(t+dt,qn,options)])
+    result = scipy.optimize.fsolve(F,[k_intial_guess])
+    result = np.split(result,2)
+    k1 = np.reshape(result[0],(2,1))
+    k2 = np.reshape(result[1],(2,1))
+    return (qn + dt/4*(3*k1+k2))
 
 
 def solveFunc(dt,algo,options):
@@ -68,7 +78,12 @@ def calcError(algo,options):
         yerrors.append(i*np.sum(np.abs(y-yExact)))
     return yerrors,dt
 
-solveFunc(0.1,"GRRK3",(-2,0.05,5))
+x,y,t = solveFunc(0.001,"GRRK3",(-2*10**-5,0.5,20))
+plt.plot(t,x)
+plt.show()
+print(y)
+plt.plot(t,y)
+plt.show()
 """
 yerrors,dts = calcError('RK3',(-2,0.05,5))
 plt.plot(dts,yerrors)
