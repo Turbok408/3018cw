@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize
 
-
 def f(t,q,options):
     """
     :param t: time value to be used
