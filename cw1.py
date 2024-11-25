@@ -1,13 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize
+from matplotlib.pyplot import title
+from numpy.lib.polynomial import polyfit
+
 
 def f(t,q,options):
     """
     :param t: time value to be used
     :param q: q vector - the data at time q
     :param options: values of gamma,epsilon and omega in format (gamma,epsilon,omega)
-    :return: the value of equation (2)
+    :return: the value of equation (2) (float)
     """
     #get omega,gamma,epsilon values
     omega= options[2]
@@ -26,7 +29,7 @@ def MyRK3_step(f,t,qn,dt,options):
     :param qn: previous value of q then q n+1 is to be calculated from
     :param dt: time step defined from the map t
     :param options: values of gamma,epsilon and omega in format (gamma,epsilon,omega)
-    :return: compute k1,k2,k3 then return value of equation 4d, the value of qn+1 at time tn+dt
+    :return: compute k1,k2,k3 then return value of equation 4d, the value of qn+1 at time tn+dt (float)
     """
     k1 = f(t,qn,options)
     k2 = f(t+1/2*dt,qn+dt/2*k1,options)
@@ -40,12 +43,12 @@ def MyGRRK3_step(f, t, qn, dt, options):
     :param qn: previous value of q then q n+1 is to be calculated from
     :param dt: time step defined from the map t
     :param options: values of gamma,epsilon and omega in format (gamma,epsilon,omega)
-    :return: use scipy.optimize.fsolve to find values for k1,k2, then return the value of eq (5c),the value of qn+1 at time tn+dt
+    :return: use scipy.optimize.fsolve to find values for k1,k2, then return the value of eq (5c),the value of qn+1 at time tn+dt (float)
     """
     def F(K):
         """
         :param K: the vector K in (6) where K=(k1[0],k1[1],k1[0],k1[1])
-        :return: the right hand side of the equation (7)
+        :return: the right hand side of the equation (7) as (4,) (k1[0],k1[1],k1[0],k1[1])
         """
         #scipy.optimize.fsolve changes the initial value K to a list of length 4 with K=(k1[0],k1[1],k1[0],k1[1]), must put the values k1,k2 into individual matrices of shape(2,1)
         k1=np.array([[K[0]],[K[1]]])
@@ -94,7 +97,7 @@ def calcError(algo,options,numerator):
     :param algo: algorithm to use, RK3 or GRRK3
     :param options: values of gamma,epsilon and omega in format (gamma,epsilon,omega)
     :param numerator : the numerator of the dt intervals specified in the question either 0.1 or 0.05
-    :return: tuple of value of y errors at time interval dt and time intervals
+    :return: [y_errors , dt], the error compared to the exact
     """
     y_errors = []
     #initialse list of time intervals specified in question
@@ -106,14 +109,99 @@ def calcError(algo,options,numerator):
         y_errors.append(i*np.sum(np.abs(y-y_exact)))
     return y_errors,dt
 
-x,y,t = solveFunc(0.001,"GRRK3",(-2*10**-5,0.5,20))
-plt.plot(t,x)
-plt.show()
-plt.plot(t,y)
-plt.show()
+def plot_dict(data):
+    """
+    :param data: dict containing title , labels , data[{label,data}] labels and data in data list in same order t as last in list
+    :return: plot to screen of given data
+    """
+    fig = plt.figure(figsize=(16, 8),constrained_layout=True)
+    fig.suptitle(data["title"])
+    # for n axis of data create n-1 subplots with n[-1] as its x axis and n as its y axis
+    for i in range(len(data["data"][0]["data"]) - 1):
+        #create a subplot at with 1 row n-1 columns
+        axs = fig.add_subplot(1, len(data["data"][0]["data"])-1, i + 1)
+        # for each set of data create a new graph on that same subplot
+        for j in data["data"]:
+            axs.plot(j["data"][-1], j["data"][i], label=j["label"])
+        # if more than one graph on the subplot make a legend
+        if len(data["data"]) > 1:
+            axs.legend(loc="best")
+        axs.set_xlabel(data["labels"][-1])
+        axs.set_ylabel(data["labels"][i])
+    plt.show()
 
-yerrors,dts = calcError("RK3",(-2,0.05,5),0.01)
-plt.plot(dts,yerrors)
-yerrors,dts = calcError("GRRK3",(-2,0.05,5),0.01)
-plt.plot(dts,yerrors)
-plt.show()
+def get_polyfit_data(data,algo):
+    """
+    :param data: data to fit to polynomial
+    :param algo: algorithm  to use as label
+    :return: data dict of polynomial fit to data given: {"label":(str),data[y,t]}
+    """
+    #create an empty t array with min max same as given t values
+    t= np.linspace(data[1][0],data[1][-1],1000)
+    #fit a 3rd degree polynomial to the data
+    z = np.polyfit( data[1],  data[0], 3)
+    #create array of values from polynomial
+    poly = np.poly1d(z)
+    y = poly(t)
+    label=str()
+    #create str of the polynomial to use as a label
+    for index, value in enumerate(poly.coef):
+        if index == 0:
+            label += str(np.round(value,8))
+        else:
+            if value > 0:
+                label += "+" + str(np.round(value,8)) + "t^" + str(index)
+            else:
+                label += str(np.round(value,8)) + "t^" + str(index)
+    return {"label":label+algo,"data": [y,t]}
+
+
+questions = []
+t_lin_space = np.linspace(0,1,1000)
+# define questions with data sets title and labels that are to be plotted
+questions.append({
+    "title":"Non-stiff case",
+    "labels":["x","y","t"],
+    "data" :
+        [{"label":"RK3","data": solveFunc(0.05,"RK3",(-2,0.05,5))},
+        {"label":"GRRK3","data": solveFunc(0.05,"GRRK3",(-2,0.05,5))},
+         {"label":"Exact","data":[np.sqrt(1+np.cos(t_lin_space)),np.sqrt(2+np.cos(5*t_lin_space)),t_lin_space]}]
+
+})
+questions.append({
+    "title":"Convergence rate of GRRK3, RK3 in non stiff case",
+    "labels":["Error","Time step"],
+    "data" :
+        [{"label":"RK3","data":calcError("RK3",(-2,0.05,5),0.01)},
+         {"label":"GRRK3","data": calcError("GRRK3",(-2,0.05,5),0.01)},
+         get_polyfit_data(calcError("RK3",(-2,0.05,5),0.01),0,0.01,"(RK3)"),
+         get_polyfit_data(calcError("GRRK3",(-2,0.05,5),0.01),0,0.01,"(GRRK3)")
+         ]
+
+})
+questions.append({
+    "title":"Stiff case using RK3",
+    "labels":["x","y","t"],
+    "data" :
+        [{"label":"RK3","data":solveFunc(0.001,"RK3",(-2*10**5,0.5,20))}]
+
+})
+questions.append({
+    "title":"Stiff case using GRRK3",
+    "labels":["x","y","t"],
+    "data" :
+        [{"label":"GRRK3","data":solveFunc(0.005,"GRRK3",(-2*10**5,0.5,20))},
+         {"label":"Exact","data":[np.sqrt(1+np.cos(t_lin_space)),np.sqrt(2+np.cos(20*t_lin_space)),t_lin_space]}]
+})
+questions.append({
+    "title":"Convergence rate of GRRK3 in stiff case",
+    "labels":["Error","Time step"],
+    "data" :
+        [{"label":"GRRK3","data": calcError("GRRK3",(-2*10**5,0.5,20),0.05)},
+         get_polyfit_data(calcError("GRRK3",(-2*10**5,0.5,20),0.05),0,0.05,"")]
+})
+
+#plot all questions
+for i in questions:
+    plot_dict(i)
+
