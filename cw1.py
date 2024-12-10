@@ -1,9 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize
-from matplotlib.pyplot import title
-from numpy.lib.polynomial import polyfit
-
 
 def f(t,q,options):
     """
@@ -90,6 +87,8 @@ def solveFunc(dt,algo,options):
             result = MyGRRK3_step(f, t[i], [[x[i]], [y[i]]], dt, options)
             y.append(result[1][0])
             x.append(result[0][0])
+    else:
+        print("Invalid algorithm choice")
     return x,y,t
 
 def calcError(algo,options,numerator):
@@ -115,19 +114,27 @@ def plot_dict(data):
     :return: plot to screen of given data
     """
     fig = plt.figure(figsize=(16, 8),constrained_layout=True)
-    fig.suptitle(data["title"])
-    # for n axis of data create n-1 subplots with n[-1] as its x axis and n as its y axis
-    for i in range(len(data["data"][0]["data"]) - 1):
-        #create a subplot at with 1 row n-1 columns
-        axs = fig.add_subplot(1, len(data["data"][0]["data"])-1, i + 1)
-        # for each set of data create a new graph on that same subplot
-        for j in data["data"]:
-            axs.plot(j["data"][-1], j["data"][i], label=j["label"])
-        # if more than one graph on the subplot make a legend
-        if len(data["data"]) > 1:
-            axs.legend(loc="best")
-        axs.set_xlabel(data["labels"][-1])
-        axs.set_ylabel(data["labels"][i])
+    try:
+        fig.suptitle(data["title"])
+        data["data"][0]["data"][1] # this will raise and error for the try,except if no data is present as the for loop will not
+        # for n axis of data create n-1 subplots with n[-1] as its x axis and n as its y axis
+        for i in range(len(data["data"][0]["data"]) - 1):
+            #create a subplot at with 1 row n-1 columns
+            axs = fig.add_subplot(1, len(data["data"][0]["data"])-1, i + 1)
+            # for each set of data create a new graph on that same subplot
+            for j in data["data"]:
+                axs.plot(j["data"][-1], j["data"][i], label=j["label"])
+            # if more than one graph on the subplot make a legend
+            if len(data["data"]) > 1:
+                axs.legend(loc="best")
+            axs.set_xlabel(data["labels"][-1])
+            axs.set_ylabel(data["labels"][i])
+    except KeyError as e:
+        print("Missing "+e.args[0]+" key in dict")
+    except IndexError:
+        print("Less than 2 list of data given")
+    except ValueError:
+        print("Data sets different length")
     plt.show()
 
 def get_polyfit_data(data,algo):
@@ -147,14 +154,13 @@ def get_polyfit_data(data,algo):
     #create str of the polynomial to use as a label
     for index, value in enumerate(poly.coef):
         if index == 0:
-            label += str(np.round(value,8))
+            label += str(np.round(value,15))
         else:
             if value > 0:
-                label += "+" + str(np.round(value,8)) + "t^" + str(index)
+                label += "+" + str(np.round(value,15)) + "t^" + str(index)
             else:
-                label += str(np.round(value,8)) + "t^" + str(index)
+                label += str(np.round(value,15)) + "t^" + str(index)
     return {"label":label+algo,"data": [y,t]}
-
 
 questions = []
 t_lin_space = np.linspace(0,1,1000)
@@ -174,8 +180,8 @@ questions.append({
     "data" :
         [{"label":"RK3","data":calcError("RK3",(-2,0.05,5),0.01)},
          {"label":"GRRK3","data": calcError("GRRK3",(-2,0.05,5),0.01)},
-         get_polyfit_data(calcError("RK3",(-2,0.05,5),0.01),0,0.01,"(RK3)"),
-         get_polyfit_data(calcError("GRRK3",(-2,0.05,5),0.01),0,0.01,"(GRRK3)")
+         get_polyfit_data(calcError("RK3",(-2,0.05,5),0.01),"(RK3)"),
+         get_polyfit_data(calcError("GRRK3",(-2,0.05,5),0.01),"(GRRK3)")
          ]
 
 })
@@ -198,7 +204,7 @@ questions.append({
     "labels":["Error","Time step"],
     "data" :
         [{"label":"GRRK3","data": calcError("GRRK3",(-2*10**5,0.5,20),0.05)},
-         get_polyfit_data(calcError("GRRK3",(-2*10**5,0.5,20),0.05),0,0.05,"")]
+         get_polyfit_data(calcError("GRRK3",(-2*10**5,0.5,20),0.05),"")]
 })
 
 #plot all questions
