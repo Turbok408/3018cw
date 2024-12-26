@@ -43,8 +43,7 @@ def solve_ivp(y_dot_0,alpha,beta,y_0,h):
         d2dtdy_dot = (L(t[i] + h, y[i], y_dot[i] + h, alpha, beta) - L(t[i] - h, y[i], y_dot[i] + h, alpha, beta) - L(t[i] + h, y[i], y_dot[i] - h, alpha, beta) + L(t[i] - h, y[i], y_dot[i] - h, alpha, beta)) / (4 * h ** 2)
         d2ldydy_dot = (L(t[i], y[i] + h, y_dot[i] + h, alpha, beta) - L(t[i], y[i] - h, y_dot[i] + h, alpha, beta) - L(t[i], y[i] + h, y_dot[i] - h, alpha, beta) + L(t[i], y[i] - h, y_dot[i] - h, alpha, beta)) / (4 * h ** 2)
         #sub derivative values into eq 4 and solve for y[i+1] using finite difference method
-        y[i + 1] = (dLdy * h ** 2 - d2dtdy_dot * h ** 2 + d2ldydy_dot * h * y[i] - d2ld2y_dot * y[
-            i - 1] + 2 * d2ld2y_dot * y[i]) / (d2ldydy_dot * h + d2ld2y_dot)        #find y'[i+1] using finite difference method
+        y[i + 1] = (dLdy * h ** 2 - d2dtdy_dot * h ** 2 + d2ldydy_dot * h * y[i] - d2ld2y_dot * y[i - 1] + 2 * d2ld2y_dot * y[i]) / (d2ldydy_dot * h + d2ld2y_dot)        #find y'[i+1] using finite difference method
         y_dot[i + 1] = (y[i + 1] - y[i]) / h
     return np.delete(t,0),np.delete(y,0)
 
@@ -86,6 +85,12 @@ plt.xlabel("t")
 plt.ylabel("y(t)")
 plt.title("Finite Difference Solution For α = 5 = β")
 plt.show()
+y_dot_0 = shoot(0.9,0.00000001,7/4,5,0.00001)
+t,y = solve_ivp(y_dot_0,7/4,5,1,0.00001)
+plt.plot(t, y)
+plt.xlabel("t")
+plt.ylabel("y(t)")
+plt.title("Finite Difference Solution For α = 7/4, β=5")
 h_values = [0.116,0.08,0.05,0.0001]
 for i in h_values:
     y_dot_0 = shoot(0.9,0.00000001,7/4,5,i)
@@ -95,13 +100,11 @@ plt.xlabel("t")
 plt.ylabel("y(t)")
 plt.title("Finite Difference Solution For α = 7/4, β=5 With Different h Values")
 plt.legend()
-plt.grid()
 plt.show()
 t,y = test_shoot_convergence(0.9,7/4,5,0.0001)
 plt.plot(t,y)
 plt.xlabel("shooting relative error")
 plt.ylabel("% error for y(1) = 0.9")
 plt.title("Error in y(1) Value For Varying Errors For the Shooting Function α = 7/4, β=5")
-plt.grid()
 plt.show()
 
